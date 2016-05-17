@@ -1,4 +1,6 @@
 clear all
+close all
+fclose all
 clc
 
 global Rgas SurfSpecsQT EquivGasSurfSpecsNames...
