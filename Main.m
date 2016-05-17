@@ -16,6 +16,7 @@ gammaRh = 2.49e-8; %kmol/m2
 MW = [1.00794,17.00734,18.01528,28.0101,44.0095,12.0107,13.01864,14.02658,15.03452,45.01744,16.04246,15.9994,2.01588,18.01528,28.0101,44.0095]/1000; %[kg/mol]
 EquivGasSurfSpecsNames = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*','CH4','O*','H2','H2O','CO','CO2'};
 
+
 for i = 1:length(EquivGasSurfSpecsNames)
     EqGasSurfaceSpecsFormH(i) = EquivGasFormationEnthalpy(EquivGasSurfSpecsNames{i},T);
 end
@@ -257,8 +258,11 @@ A_s_Back(irxn) = 7.60e12;
 beta_Forw(irxn) = 0.2944;
 beta_Back(irxn) = -0.2944;
 
-fileID = fopen('fileout.txt','w');
 CRLF = [char(13) char(10)];
+fileID = fopen('fileout.txt','w');
+fileZacrosID = fopen('mechanism_input.dat','w');
+fprintf (fileZacrosID,['mechanism' CRLF]);
+fprintf (fileZacrosID,[CRLF]);
 
 for i=1:irxn
     ReactionNumber(i) = i;
@@ -297,26 +301,40 @@ for i=1:irxn
     fprintf (fileID,[' --> ']);
     
     if length(GasProd{i})==1
-        fprintf (fileID,[char(cell2mat(GasProd{i}(1))),'\n']);
+        fprintf (fileID,[char(cell2mat(GasProd{i}(1))) CRLF]);
     elseif length(GasProd{i})==2
-        fprintf (fileID,[char(cell2mat(GasProd{i}(1))),' + ',char(cell2mat(GasProd{i}(2))),'\n']);
+        fprintf (fileID,[char(cell2mat(GasProd{i}(1))),' + ',char(cell2mat(GasProd{i}(2))) CRLF]);
     end
     
     if length(SurfProd{i})==1
-        fprintf (fileID,[char(cell2mat(SurfProd{i}(1))),'\n']);
+        fprintf (fileID,[char(cell2mat(SurfProd{i}(1))) CRLF]);
     elseif length(SurfProd{i})==2
-        fprintf (fileID,[char(cell2mat(SurfProd{i}(1))),' + ',char(cell2mat(SurfProd{i}(2))),'\n']);
+        fprintf (fileID,[char(cell2mat(SurfProd{i}(1))),' + ',char(cell2mat(SurfProd{i}(2))), CRLF]);
     end
     
-    fprintf (fileID,['Reaction_Type: ' , num2str(UBIType(i)) CRLF],'\n');
-    fprintf (fileID,['Eact_React', num2str(ReactionNumber(i)), '_Forw: ', num2str(EactForw{i}) ,' kcal/mol' CRLF],'\n');
-    fprintf (fileID,['Eact_React', num2str(ReactionNumber(i)), '_Back: ', num2str(EactBack{i}) ,' kcal/mol' CRLF],'\n');
-    fprintf (fileID,['k_React', num2str(ReactionNumber(i)), '_Forw: ', num2str(kForw{i},'%1.2e') CRLF],'\n');
-    fprintf (fileID,['k_React', num2str(ReactionNumber(i)), '_Back: ', num2str(kBack{i},'%1.2e') CRLF],'\n');
-    fprintf (fileID,['**************************************************************' CRLF],'\n');
-    fprintf (fileID,[' ' CRLF],'\n');
+    fprintf (fileID,['Reaction_Type: ' , num2str(UBIType(i)) CRLF]);
+    fprintf (fileID,['Eact_React', num2str(ReactionNumber(i)), '_Forw: ', num2str(EactForw{i}) ,' kcal/mol' CRLF]);
+    fprintf (fileID,['Eact_React', num2str(ReactionNumber(i)), '_Back: ', num2str(EactBack{i}) ,' kcal/mol' CRLF]);
+    fprintf (fileID,['k_React', num2str(ReactionNumber(i)), '_Forw: ', num2str(kForw{i},'%1.2e') CRLF]);
+    fprintf (fileID,['k_React', num2str(ReactionNumber(i)), '_Back: ', num2str(kBack{i},'%1.2e') CRLF]);
+    fprintf (fileID,['**************************************************************' CRLF]);
+    fprintf (fileID,[' ' CRLF]);
+
+    fprintf (fileZacrosID,['reversible_step Reaction' , num2str(i) CRLF]);
+    fprintf (fileZacrosID,['   sites ' , num2str(max(length(SurfReact{i}))) CRLF]);
+
+    fprintf (fileZacrosID,['end_reversible_step' CRLF]);
+    fprintf (fileZacrosID,['' CRLF]);
+    
+    
+    
+    
+    
     
 end
 
+fprintf (fileZacrosID,['end_mechanism' CRLF]);
+
 fclose(fileID);
+fclose(fileZacrosID);
 
