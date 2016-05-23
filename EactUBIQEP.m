@@ -1,17 +1,17 @@
 function out1 = EactUBIQEP(GasReact, SurfReact, GasProd, SurfProd, UBIType ,ReactionNumber)
 
-global  SurfSpecsQT EquivGasSurfSpecsNames EqGasSurfaceSpecsFormH gammaRh BondIndex A_s_Forw A_s_Back T T0 beta_Forw beta_Back  Rgas MW
+global  SurfSpecsQT GasSpecsNames GasSurfaceSpecsFormH gammaRh BondIndex A_s_Forw A_s_Back T T0 beta_Forw beta_Back  Rgas MW
 
 if UBIType == 1 % Non-activated atomic or non-dissociative molecular adsorption, e.g., A+*-->A*
     
     for i = 1:length(GasReact)
-        HGasReact(i)=EqGasSurfaceSpecsFormH(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
-        MWGasReact(i)=MW(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
+        HGasReact(i)=GasSurfaceSpecsFormH(SpecIndx(GasReact{i},GasSpecsNames));
+        MWGasReact(i)=MW(SpecIndx(GasReact{i},GasSpecsNames));
     end
     
     for i = 1:length(SurfProd)
-        HSurfProd(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
-        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
+        HSurfProd(i)=GasSurfaceSpecsFormH(SpecIndx(SurfProd{i},GasSpecsNames));
+        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},GasSpecsNames));
     end
     
     Dab=0;
@@ -30,13 +30,13 @@ end
 if UBIType == 2 % Non-activated homonuclear dissociative adsorption, e.g., A2+2*-->2A*
     
     for i = 1:length(GasReact)
-        HGasReact(i)=EqGasSurfaceSpecsFormH(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
-        MWGasReact(i)=MW(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
+        HGasReact(i)=GasSurfaceSpecsFormH(SpecIndx(GasReact{i},GasSpecsNames));
+        MWGasReact(i)=MW(SpecIndx(GasReact{i},GasSpecsNames));
     end
     
     for i = 1:length(SurfProd)
-        HSurfProd(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
-        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
+        HSurfProd(i)=GasSurfaceSpecsFormH(SpecIndx(SurfProd{i},GasSpecsNames));
+        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},GasSpecsNames));
     end
     
     Dab=sum(HSurfProd)-sum(HGasReact);
@@ -54,14 +54,14 @@ end
 if UBIType == 4 % Activated heteronuclear adsorption, e.g., AB+2*-->A*+B*
     
     for i = 1:length(GasReact)
-        HGasReact(i)=EqGasSurfaceSpecsFormH(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
-        QGasReact(i)=SurfSpecsQT(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
-        MWGasReact(i)=MW(SpecIndx(GasReact{i},EquivGasSurfSpecsNames));
+        HGasReact(i)=GasSurfaceSpecsFormH(SpecIndx(GasReact{i},GasSpecsNames));
+        QGasReact(i)=SurfSpecsQT(SpecIndx(GasReact{i},GasSpecsNames));
+        MWGasReact(i)=MW(SpecIndx(GasReact{i},GasSpecsNames));
     end
     
     for i = 1:length(SurfProd)
-        HSurfProd(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
-        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
+        HSurfProd(i)=GasSurfaceSpecsFormH(SpecIndx(SurfProd{i},GasSpecsNames));
+        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},GasSpecsNames));
     end
     
     Dab=sum(HSurfProd)-sum(HGasReact);
@@ -79,13 +79,13 @@ end
 if UBIType == 5 % Heteronuclear surface dissociation, e.g., AB*+*-->A*+B*
     
     for i = 1:length(SurfReact)
-        HSurfReact(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfReact{i},EquivGasSurfSpecsNames));
-        QSurfReact(i)=SurfSpecsQT(SpecIndx(SurfReact{i},EquivGasSurfSpecsNames));
+        HSurfReact(i)=GasSurfaceSpecsFormH(SpecIndx(SurfReact{i},GasSpecsNames));
+        QSurfReact(i)=SurfSpecsQT(SpecIndx(SurfReact{i},GasSpecsNames));
     end
     
     for i = 1:length(SurfProd)
-        HSurfProd(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
-        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
+        HSurfProd(i)=GasSurfaceSpecsFormH(SpecIndx(SurfProd{i},GasSpecsNames));
+        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},GasSpecsNames));
     end
     
     Dab=sum(HSurfProd)-sum(HSurfReact);
@@ -103,13 +103,13 @@ end
 if UBIType == 6 % Surface disproportionation, e.g., A*+B*-->C*+D*
     
     for i = 1:length(SurfReact)
-        HSurfReact(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfReact{i},EquivGasSurfSpecsNames));
-        QSurfReact(i)=SurfSpecsQT(SpecIndx(SurfReact{i},EquivGasSurfSpecsNames));
+        HSurfReact(i)=GasSurfaceSpecsFormH(SpecIndx(SurfReact{i},GasSpecsNames));
+        QSurfReact(i)=SurfSpecsQT(SpecIndx(SurfReact{i},GasSpecsNames));
     end
     
     for i = 1:length(SurfProd)
-        HSurfProd(i)=EqGasSurfaceSpecsFormH(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
-        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},EquivGasSurfSpecsNames));
+        HSurfProd(i)=GasSurfaceSpecsFormH(SpecIndx(SurfProd{i},GasSpecsNames));
+        QSurfProd(i)=SurfSpecsQT(SpecIndx(SurfProd{i},GasSpecsNames));
     end
     
     Dab=sum(HSurfProd)-sum(HSurfReact);

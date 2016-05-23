@@ -3,7 +3,7 @@ close all
 fclose all
 clc
 
-global Rgas SurfSpecsQT EquivGasSurfSpecsNames...
+global Rgas GasSpecies SurfSpecsQT ...
     EqGasSurfaceSpecsFormH gammaRh BondIndex A_s_Forw A_s_Back T T0...
     beta_Forw beta_Back MW
 
@@ -18,21 +18,32 @@ deltaT = T - T0; %[K]
 gammaRh = 2.49e-8; %kmol/m2
 
 MW = [1.00794,17.00734,18.01528,28.0101,44.0095,12.0107,13.01864,14.02658,15.03452,45.01744,16.04246,15.9994,2.01588,18.01528,28.0101,44.0095]/1000; %[kg/mol]
-EquivGasSurfSpecsNames = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*','CH4','O*','H2','H2O','CO','CO2'};
 GasSpecies = {'CH4','H2','H2O','CO','CO2'};
+GasSpecies_formvec = {[1 4 0],[0 2 0],[0 2 1],[1 0 1],[1 0 2]};
+
 SurfaceSpecies = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*','O*'};
+SurfaceSpecies_formvec = {[0 1 0],[0 1 1],[0 2 1],[1 0 1]};
+MatrixCompRef = transpose([
+    GasSpecies_formvec{SpecIndx('CH4',GasSpecies)};
+    GasSpecies_formvec{SpecIndx('H2',GasSpecies)};
+    GasSpecies_formvec{SpecIndx('H2O',GasSpecies)}]); % in rows: C H O , in column: CH4, H2, H2O
+invMatrixCompRef = inv(MatrixCompRef);
 
 P = 1 ; %bar %random value
-Molec_Fract_CH4 = 0.2; %random value
-Molec_Fract_H2 = 0.2; %random value
-Molec_Fract_H2O = 0.3; %random value
-Molec_Fract_CO = 0.2; %random value
-Molec_Fract_CO2 = 0.1; %random value
-Molecular_Fractions = [Molec_Fract_CH4 Molec_Fract_H2 Molec_Fract_H2O Molec_Fract_CO Molec_Fract_CO2];
+Molecular_Fractions = zeros(1,length(SurfaceSpecies));
+Molecular_Fractions(SpecIndx('CH4',GasSpecies)) = 0.2;
+Molecular_Fractions(SpecIndx('H2',GasSpecies)) = 0.2;
+% 
+% Molec_Fract_CH4 = 0.2; %random value
+% Molec_Fract_H2 = 0.2; %random value
+% Molec_Fract_H2O = 0.3; %random value
+% Molec_Fract_CO = 0.2; %random value
+% Molec_Fract_CO2 = 0.1; %random value
+% Molecular_Fractions = [Molec_Fract_CH4 Molec_Fract_H2 Molec_Fract_H2O Molec_Fract_CO Molec_Fract_CO2];
 Partial_Pressure = P*Molecular_Fractions; %bar
 
-for i = 1:length(EquivGasSurfSpecsNames)
-    EqGasSurfaceSpecsFormH(i) = EquivGasFormationEnthalpy(EquivGasSurfSpecsNames{i},T);
+for i = 1:length(GasSpecies)
+    GasSpecsFormH(i) = GasFormationEnthalpy(GasSpecies{i},T);
 end
 
 Species_for_Q = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*', 'CH4' ,'O*'};
@@ -477,7 +488,8 @@ vett_comp_CO = [1 0 1]'; %if ref species [0 0 0] if not components respect to [C
 vett_comp_CO2 = [1 0 2]'; %if ref species [0 0 0] if not components respect to [C H O]
 vett_comp = [vett_comp_CH4 vett_comp_H2 vett_comp_H2O vett_comp_CO vett_comp_CO2];
 for indexcomp = 1:length(vett_comp)
-    coeff_form_energy(:,indexcomp) = inv(MatrixCompRef) * vett_comp(:,indexcomp);
+    coeff_form_energy(:,indexcomp) = invMatrixCompRef*GasSpecies_formvec{SpecIndx('CO*',GasSpecies)}.'
+    % inv(MatrixCompRef) * vett_comp(:,indexcomp);
 end
 
 for indexformenergy = 1:length(GasSpecies)
