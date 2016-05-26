@@ -1,80 +1,128 @@
 clear all
 close all
-fclose all
 clc
 
-global Rgas GasSpecies SurfSpecsQT ...
-    EqGasSurfaceSpecsFormH gammaRh BondIndex A_s_Forw A_s_Back T T0...
-    beta_Forw beta_Back MW
-
-random_seed = 71543 ;
+global Rgas GasFormH gammaRh BondIndex A_s_Forw A_s_Back T T0 ...
+    beta_Forw beta_Back GasSpecies SurfaceSpecies MW QT
 
 Rgas = 8.314/4.184/1000; %[kcal/mol/K]
-T0 = 300; %[K]
+conversion_kcal_over_mol_to_eV = 0.0433634; % 1 kcal/mol = 0.0433634 eV
 
+T0 = 300; %[K]
 T = 500 + 273.15; %[K]
 deltaT = T - T0; %[K]
 
 gammaRh = 2.49e-8; %kmol/m2
 
-MW = [1.00794,17.00734,18.01528,28.0101,44.0095,12.0107,13.01864,14.02658,15.03452,45.01744,16.04246,15.9994,2.01588,18.01528,28.0101,44.0095]/1000; %[kg/mol]
 GasSpecies = {'CH4','H2','H2O','CO','CO2'};
-GasSpecies_formvec = {[1 4 0],[0 2 0],[0 2 1],[1 0 1],[1 0 2]};
-
 SurfaceSpecies = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*','O*'};
-SurfaceSpecies_formvec = {[0 1 0],[0 1 1],[0 2 1],[1 0 1]};
-MatrixCompRef = transpose([
-    GasSpecies_formvec{SpecIndx('CH4',GasSpecies)};
-    GasSpecies_formvec{SpecIndx('H2',GasSpecies)};
-    GasSpecies_formvec{SpecIndx('H2O',GasSpecies)}]); % in rows: C H O , in column: CH4, H2, H2O
-invMatrixCompRef = inv(MatrixCompRef);
+
+%Insert molecular weight of surface species
+MW = zeros(1,(length(SurfaceSpecies)+length(GasSpecies)));
+MW(SpecIndx('H*',SurfaceSpecies)) = 1.00794 /1000; %[kg/mol]
+MW(SpecIndx('OH*',SurfaceSpecies)) = 17.00734 /1000; %[kg/mol]
+MW(SpecIndx('H2O*',SurfaceSpecies)) = 18.01528 /1000; %[kg/mol]
+MW(SpecIndx('CO*',SurfaceSpecies)) = 28.0101 /1000; %[kg/mol]
+MW(SpecIndx('CO2*',SurfaceSpecies)) = 44.0095 /1000; %[kg/mol]
+MW(SpecIndx('C*',SurfaceSpecies)) = 12.0107 /1000; %[kg/mol]
+MW(SpecIndx('CH*',SurfaceSpecies)) = 13.01864 /1000; %[kg/mol]
+MW(SpecIndx('CH2*',SurfaceSpecies)) = 14.02658 /1000; %[kg/mol]
+MW(SpecIndx('CH3*',SurfaceSpecies)) = 15.9994 /1000; %[kg/mol]
+MW(SpecIndx('COOH*',SurfaceSpecies)) = 45.01744 /1000; %[kg/mol]
+MW(SpecIndx('O*',SurfaceSpecies)) = 16.04246 /1000; %[kg/mol]
+
+%Insert molecular weight of gas species
+MW(length(SurfaceSpecies)+SpecIndx('CH4',GasSpecies)) =  16.04246 /1000; %[kg/mol]
+MW(length(SurfaceSpecies)+SpecIndx('H2',GasSpecies)) =  2.01588 /1000; %[kg/mol]
+MW(length(SurfaceSpecies)+SpecIndx('H2O',GasSpecies)) =  18.01528 /1000; %[kg/mol]
+MW(length(SurfaceSpecies)+SpecIndx('CO',GasSpecies)) =  28.0101 /1000; %[kg/mol]
+MW(length(SurfaceSpecies)+SpecIndx('CO2',GasSpecies)) =  44.0095 /1000; %[kg/mol]
 
 P = 1 ; %bar %random value
-Molecular_Fractions = zeros(1,length(SurfaceSpecies));
-Molecular_Fractions(SpecIndx('CH4',GasSpecies)) = 0.2;
-Molecular_Fractions(SpecIndx('H2',GasSpecies)) = 0.2;
-% 
-% Molec_Fract_CH4 = 0.2; %random value
-% Molec_Fract_H2 = 0.2; %random value
-% Molec_Fract_H2O = 0.3; %random value
-% Molec_Fract_CO = 0.2; %random value
-% Molec_Fract_CO2 = 0.1; %random value
-% Molecular_Fractions = [Molec_Fract_CH4 Molec_Fract_H2 Molec_Fract_H2O Molec_Fract_CO Molec_Fract_CO2];
+Molecular_Fractions = zeros(1,length(GasSpecies));
+Molecular_Fractions(SpecIndx('CH4',GasSpecies)) = 0.2; %random value
+Molecular_Fractions(SpecIndx('H2',GasSpecies)) = 0.2; %random value
+Molecular_Fractions(SpecIndx('H2O',GasSpecies)) = 0.1; %random value
+Molecular_Fractions(SpecIndx('CO',GasSpecies)) = 0.3; %random value
+Molecular_Fractions(SpecIndx('CO2',GasSpecies)) = 0.0; %random value
 Partial_Pressure = P*Molecular_Fractions; %bar
 
-for i = 1:length(GasSpecies)
-    GasSpecsFormH(i) = GasFormationEnthalpy(GasSpecies{i},T);
+%Let's calculate the formation energies of each species in gas phase
+for i = 1:(length(SurfaceSpecies)+length(GasSpecies))
+    if i <= length(SurfaceSpecies)
+        GasFormH(i) = GasFormationEnthalpy(SurfaceSpecies{i}(1:end-1),T);
+    else
+        GasFormH(i) = GasFormationEnthalpy(GasSpecies{i-length(SurfaceSpecies)},T);
+    end
 end
 
-Species_for_Q = {'H*','OH*','H2O*','CO*','CO2*','C*','CH*','CH2*','CH3*','COOH*', 'CH4' ,'O*'};
-Species_for_Q_for_energetics = {'H','OH','H2O','CO','CO2','C','CH','CH2','CH3','COOH', 'CH4' ,'O'};
+%Let's create the QT0_ZeroCoverage vector
+QT0_ZeroCoverage = zeros(1,(length(GasSpecies)+length(SurfaceSpecies)));
+QT0_ZeroCoverage(SpecIndx('H*',SurfaceSpecies))= 62.3; %[kcal/mol]
+QT0_ZeroCoverage(SpecIndx('OH*',SurfaceSpecies))= 70;
+QT0_ZeroCoverage(SpecIndx('H2O*',SurfaceSpecies))= 10.8;
+QT0_ZeroCoverage(SpecIndx('CO*',SurfaceSpecies))= 38.5;
+QT0_ZeroCoverage(SpecIndx('CO2*',SurfaceSpecies))= 5.2;
+QT0_ZeroCoverage(SpecIndx('C*',SurfaceSpecies))= 159;
+QT0_ZeroCoverage(SpecIndx('CH*',SurfaceSpecies))= 151.2;
+QT0_ZeroCoverage(SpecIndx('CH2*',SurfaceSpecies))= 109.3;
+QT0_ZeroCoverage(SpecIndx('CH3*',SurfaceSpecies))= 42.4;
+QT0_ZeroCoverage(SpecIndx('COOH*',SurfaceSpecies))= 62.2;
+QT0_ZeroCoverage(SpecIndx('O*',SurfaceSpecies))= 100;
+QT0_ZeroCoverage(length(SurfaceSpecies)+SpecIndx('CH4',GasSpecies))= 6;
 
-SurfSpecsQT0_ZeroCoverage = [62.3 70 10.8 38.5 5.2 159 151.2 109.3 42.4 62.2 6 100]; %[kcal/mol]
 
-IE = zeros (12,5);
-IE(1,1) = -2.5;
-IE(1,4) = -3.7;
-IE(2,2) = -25;
-IE(2,3) = 25;
-IE(2,5) = -33;
-IE(3,2) = 25;
-IE(3,3) = -4.5;
-IE(4,1) = -3.7;
-IE(4,4) = -15;
-IE(12,5) = -26;
+%In order to create the matrix of IE add the dependency between the species for which you want calculate the Q (1 term)
+%and the species that influenced as lateral interaction (teta) (2 term)
+IE = zeros((length(GasSpecies)+length(SurfaceSpecies)),length(SurfaceSpecies));
 
-teta_H = 0.0;
-teta_OH = 0.0;
-teta_H2O = 0;
-teta_CO = 0;
-teta_O = 0;
+IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = -2.5; %In order to create the matrix of IE add the dependence between the species (1 term) and the species that influenced as lateral interaction (teta) (2 term)
+IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('CO*',SurfaceSpecies)) = -3.7;
 
-teta = [teta_H , teta_OH , teta_H2O , teta_CO , teta_O];
+IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('OH*',SurfaceSpecies)) = -25;
+IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('H2O*',SurfaceSpecies)) = 25;
+IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('O*',SurfaceSpecies)) = -33;
 
-f = [1.5 , 2 , 2.5 , 2 , 2 , 1.5 , 2 , 2.5 , 2.5 , 2.5 , 2 , 1.5];
+IE(SpecIndx('H2O*',SurfaceSpecies),SpecIndx('OH*',SurfaceSpecies)) = 25;
+IE(SpecIndx('H2O*',SurfaceSpecies),SpecIndx('H2O*',SurfaceSpecies)) = -4.5;
 
-SurfSpecsQT = SurfSpecsQT0_ZeroCoverage + (IE * teta')' - f * Rgas * deltaT;
+IE(SpecIndx('CO*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = -3.7;
+IE(SpecIndx('CO*',SurfaceSpecies),SpecIndx('CO*',SurfaceSpecies)) = -15;
 
+IE(SpecIndx('O*',SurfaceSpecies),SpecIndx('O*',SurfaceSpecies)) = -26;
+
+%Let's create the f vector that contains the dependency on Temperature
+f = zeros(1,(length(GasSpecies)+length(SurfaceSpecies)));
+f(SpecIndx('H*',SurfaceSpecies))= 1.5;
+f(SpecIndx('OH*',SurfaceSpecies))= 2;
+f(SpecIndx('H2O*',SurfaceSpecies))= 2.5;
+f(SpecIndx('CO*',SurfaceSpecies))= 2;
+f(SpecIndx('CO2*',SurfaceSpecies))= 2;
+f(SpecIndx('C*',SurfaceSpecies))= 1.5;
+f(SpecIndx('CH*',SurfaceSpecies))= 2;
+f(SpecIndx('CH2*',SurfaceSpecies))= 2.5;
+f(SpecIndx('CH3*',SurfaceSpecies))= 2.5;
+f(SpecIndx('COOH*',SurfaceSpecies))= 2.5;
+f(SpecIndx('O*',SurfaceSpecies))= 1.5;
+f(length(SurfaceSpecies)+SpecIndx('CH4',GasSpecies))= 2;
+
+%Let's create the teta Matrix that contains the lateral interactions
+teta(SpecIndx('H*',SurfaceSpecies))= 0;
+teta(SpecIndx('OH*',SurfaceSpecies))= 0;
+teta(SpecIndx('H2O*',SurfaceSpecies))= 0;
+teta(SpecIndx('CO*',SurfaceSpecies))= 0;
+teta(SpecIndx('CO2*',SurfaceSpecies))= 0;
+teta(SpecIndx('C*',SurfaceSpecies))= 0;
+teta(SpecIndx('CH*',SurfaceSpecies))= 0;
+teta(SpecIndx('CH2*',SurfaceSpecies))= 0;
+teta(SpecIndx('CH3*',SurfaceSpecies))= 0;
+teta(SpecIndx('COOH*',SurfaceSpecies))= 0;
+teta(SpecIndx('O*',SurfaceSpecies))= 0;
+
+% Let's put all together and calculate the QT that is the Heat of Chemisorption of Surface Species at the temperature of the system
+QT = QT0_ZeroCoverage + (IE * teta')' - f * Rgas * deltaT; %[kcal/mol]
+
+% Insert here the reactions
 irxn = 0;
 
 irxn = irxn + 1;
@@ -305,7 +353,7 @@ A_s_Back(irxn) = 7.60e12;
 beta_Forw(irxn) = 0.2944;
 beta_Back(irxn) = -0.2944;
 
-
+%From this point on calculations and printing
 CRLF = [char(13) char(10)];
 
 fileID = fopen('summary_reactions.txt','w');
@@ -409,8 +457,6 @@ for i=1:irxn
                 fprintf (fileZacrosID_Mechanism,['    ', num2str(ind), ' ',cell2mat(SurfReact{i}(ind)), ' 1'  CRLF]); %Surface Reaction of 2 surface species
             end
             
-            
-            
         end
     end
     
@@ -456,6 +502,7 @@ fclose(fileZacrosID_Mechanism);
 %From here we create the simulation_input file
 fileZacrosID_Simulation = fopen('simulation_input.dat','w');
 
+random_seed = 71543 ;
 fprintf (fileZacrosID_Simulation,['random_seed               ', num2str(random_seed) , ' # random value' CRLF]);
 fprintf (fileZacrosID_Simulation,['' CRLF]);
 fprintf (fileZacrosID_Simulation,['temperature               ', sprintf('%1.2f',T) CRLF]);
@@ -472,44 +519,62 @@ fprintf (fileZacrosID_Simulation,['' CRLF]);
 
 fprintf (fileZacrosID_Simulation,['gas_energies              ']);
 
-%I choose as reference species CH4 H2 H2O
+%I chose as reference species CH4 H2 H2O
 
 Reference_Gas_Species = {'CH4' , 'H2' , 'H2O'};
 
 for indexRefGasSpecies = 1:length(Reference_Gas_Species)
-    Matrix_H_ref_gas_species(indexRefGasSpecies) = EqGasSurfaceSpecsFormH(SpecIndx(Reference_Gas_Species{indexRefGasSpecies},EquivGasSurfSpecsNames));
+    Matrix_H_ref_gas_species(indexRefGasSpecies) = GasFormH(length(SurfaceSpecies)+SpecIndx(Reference_Gas_Species{indexRefGasSpecies},GasSpecies));
 end
 
 MatrixCompRef = [1 0 0; 4 2 2; 0 0 1]; % in rows: C H O , in column: CH4, H2, H2O
-vett_comp_CH4 = [0 0 0]'; %if ref species [0 0 0] if not components respect to [C H O]
-vett_comp_H2 = [0 0 0]'; %if ref species [0 0 0] if not components respect to [C H O]
-vett_comp_H2O = [0 0 0]'; %if ref species [0 0 0] if not components respect to [C H O]
-vett_comp_CO = [1 0 1]'; %if ref species [0 0 0] if not components respect to [C H O]
-vett_comp_CO2 = [1 0 2]'; %if ref species [0 0 0] if not components respect to [C H O]
-vett_comp = [vett_comp_CH4 vett_comp_H2 vett_comp_H2O vett_comp_CO vett_comp_CO2];
+vett_comp = zeros (length(Reference_Gas_Species),(length(SurfaceSpecies)+length(GasSpecies)));
+
+%insert SurfaceSpaces here, if reference species put [0 0 0] , if not put components respect to [C H O]
+vett_comp(:,SpecIndx('H*',SurfaceSpecies)) = [0 1 0]';
+vett_comp(:,SpecIndx('OH*',SurfaceSpecies)) = [0 1 1]';
+vett_comp(:,SpecIndx('H2O*',SurfaceSpecies)) = [0 2 1]';
+vett_comp(:,SpecIndx('CO*',SurfaceSpecies)) = [1 0 1]';
+vett_comp(:,SpecIndx('CO2*',SurfaceSpecies)) = [1 0 2]';
+vett_comp(:,SpecIndx('C*',SurfaceSpecies)) = [1 0 0]';
+vett_comp(:,SpecIndx('CH*',SurfaceSpecies)) = [1 1 0]';
+vett_comp(:,SpecIndx('CH2*',SurfaceSpecies)) = [1 2 0]';
+vett_comp(:,SpecIndx('CH3*',SurfaceSpecies)) = [1 3 0]';
+vett_comp(:,SpecIndx('COOH*',SurfaceSpecies)) = [1 1 2]';
+vett_comp(:,SpecIndx('O*',SurfaceSpecies)) = [0 0 1]';
+
+%insert GasSpaces here, if reference species put [0 0 0] , if not put components respect to [C H O]
+vett_comp(:,(length(SurfaceSpecies)+SpecIndx('CH4',GasSpecies))) = [0 0 0]';
+vett_comp(:,(length(SurfaceSpecies)+SpecIndx('H2',GasSpecies)))= [0 0 0]';
+vett_comp(:,(length(SurfaceSpecies)+SpecIndx('H2O',GasSpecies)))= [0 0 0]';
+vett_comp(:,(length(SurfaceSpecies)+SpecIndx('CO',GasSpecies)))= [1 0 1]';
+vett_comp(:,(length(SurfaceSpecies)+SpecIndx('CO2',GasSpecies)))= [1 0 2]';
+
 for indexcomp = 1:length(vett_comp)
-    coeff_form_energy(:,indexcomp) = invMatrixCompRef*GasSpecies_formvec{SpecIndx('CO*',GasSpecies)}.'
-    % inv(MatrixCompRef) * vett_comp(:,indexcomp);
+    coeff_form_energy(:,indexcomp) = inv(MatrixCompRef) * vett_comp(:,indexcomp);
 end
 
-for indexformenergy = 1:length(GasSpecies)
-    if indexformenergy <= length(Reference_Gas_Species)
-        FormEnergy(indexformenergy) = 0;
+for indexformenergy = 1:(length(SurfaceSpecies)+length(GasSpecies))
+    if indexformenergy <= length(SurfaceSpecies)
+        FormEnergy(indexformenergy) = (GasFormH(indexformenergy)-sum(Matrix_H_ref_gas_species.*coeff_form_energy(:,indexformenergy)'))*conversion_kcal_over_mol_to_eV; %[eV]
     else
-        FormEnergy(indexformenergy) = (EqGasSurfaceSpecsFormH(SpecIndx(GasSpecies{indexformenergy},EquivGasSurfSpecsNames))...
-            -sum(Matrix_H_ref_gas_species.*coeff_form_energy(:,indexformenergy)'))*0.0433634; % 1 kcal/mol = 0.0433634 eV
+        if sum(strcmp(GasSpecies{indexformenergy-length(SurfaceSpecies)},Reference_Gas_Species))==1
+            FormEnergy(indexformenergy) = 0;
+        elseif sum(strcmp(GasSpecies{indexformenergy-length(SurfaceSpecies)},Reference_Gas_Species))==0
+            FormEnergy(indexformenergy) = (GasFormH(indexformenergy)-sum(Matrix_H_ref_gas_species.*coeff_form_energy(:,indexformenergy)'))*conversion_kcal_over_mol_to_eV; %[eV]
+        end
     end
 end
 
 for indexprintformenergy = 1:length(GasSpecies)
-    fprintf (fileZacrosID_Simulation,['  ' ,sprintf('%1.3f', (FormEnergy(indexprintformenergy)))]);
+    fprintf (fileZacrosID_Simulation,['  ' ,sprintf('%1.3f', (FormEnergy(length(SurfaceSpecies)+indexprintformenergy)))]);
 end
 fprintf (fileZacrosID_Simulation,[' # eV' CRLF]);
 
 
 fprintf (fileZacrosID_Simulation,['gas_molec_weights     ']);
 for indexweights = 1:length(GasSpecies)
-    fprintf (fileZacrosID_Simulation,['  ' ,sprintf('%1.3f ', (MW(SpecIndx(GasSpecies(indexweights),EquivGasSurfSpecsNames)))*1000)]);
+    fprintf (fileZacrosID_Simulation,['  ' ,sprintf('%1.3f ', (MW(length(SurfaceSpecies)+SpecIndx(GasSpecies(indexweights),GasSpecies)))*1000)]);
 end
 fprintf (fileZacrosID_Simulation,[' # g/mol' CRLF]);
 
@@ -588,29 +653,21 @@ fprintf (fileZacrosID_Lattice,['end_lattice' CRLF]);
 fclose(fileZacrosID_Lattice);
 
 %From here we create the energetics_input file
-
-fileZacrosID_Energetics = fopen('energetics_input_from_Matlab.dat','w');
-
+fileZacrosID_Energetics = fopen('energetics_input.dat','w');
 fprintf (fileZacrosID_Energetics,['energetics' CRLF]);
-
 fprintf (fileZacrosID_Energetics,[CRLF]);
 fprintf (fileZacrosID_Energetics,['#########################################################' CRLF]);
 
-for indexenergetics = 1:length(GasSpecies)
-    if indexenergetics <= length(Reference_Gas_Species)
-        cluster_energy{indexenergetics} = - SurfSpecsQT(SpecIndx(Reference_Gas_Species{indexenergetics},Species_for_Q_for_energetics));
-    else
-        cluster_energy{indexenergetics} = FormEnergy(indexenergetics) - ...
-            (SurfSpecsQT(SpecIndx(GasSpecies{indexenergetics},Species_for_Q_for_energetics)))*0.0433634; % 1 kcal/mol = 0.0433634 eV
-    end
+for indexenergetics = 1:length(SurfaceSpecies)
+    cluster_energy{indexenergetics} = FormEnergy(indexenergetics)-QT(indexenergetics)*conversion_kcal_over_mol_to_eV; %[eV]
 end
 
-for indexcluster = 1:length(GasSpecies)
+for indexcluster = 1:length(SurfaceSpecies)
     fprintf (fileZacrosID_Energetics,[CRLF]);
-    fprintf (fileZacrosID_Energetics,['cluster ', char(GasSpecies{indexcluster}), '_Point' CRLF]);
+    fprintf (fileZacrosID_Energetics,['cluster ', char(SurfaceSpecies{indexcluster}), '_Point' CRLF]);
     fprintf (fileZacrosID_Energetics,['  sites 1 ' CRLF]);
     fprintf (fileZacrosID_Energetics,['  lattice_state ' CRLF]);
-    fprintf (fileZacrosID_Energetics,['    1 ', char(GasSpecies{indexcluster}), '*   1' CRLF]);
+    fprintf (fileZacrosID_Energetics,['    1 ', char(SurfaceSpecies{indexcluster}), '   1' CRLF]);
     fprintf (fileZacrosID_Energetics,['  site_types StTp1' CRLF]);
     fprintf (fileZacrosID_Energetics,['  graph_multiplicity 1' CRLF]);
     fprintf (fileZacrosID_Energetics,['  cluster_eng ' , sprintf('%1.3f', cluster_energy{indexcluster}),' # eV' CRLF]);

@@ -1,1 +1,1 @@
-"G:\Executable Zacros\Zacros_1.02.exe"
+"C:\Users\Stefano\Documents\Executable Zacros\Zacros_1.02.exe"
