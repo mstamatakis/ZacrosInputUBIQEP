@@ -38,13 +38,13 @@ MW(length(SurfaceSpecies)+SpecIndx('H2O',GasSpecies)) =  18.01528 /1000; %[kg/mo
 MW(length(SurfaceSpecies)+SpecIndx('CO',GasSpecies)) =  28.0101 /1000; %[kg/mol]
 MW(length(SurfaceSpecies)+SpecIndx('CO2',GasSpecies)) =  44.0095 /1000; %[kg/mol]
 
-P = 1 ; %bar %random value
+P = 0.1 ; %bar %random value
 Molecular_Fractions = zeros(1,length(GasSpecies));
-Molecular_Fractions(SpecIndx('CH4',GasSpecies)) = 0.2; %random value
-Molecular_Fractions(SpecIndx('H2',GasSpecies)) = 0.2; %random value
-Molecular_Fractions(SpecIndx('H2O',GasSpecies)) = 0.1; %random value
-Molecular_Fractions(SpecIndx('CO',GasSpecies)) = 0.3; %random value
-Molecular_Fractions(SpecIndx('CO2',GasSpecies)) = 0.0; %random value
+Molecular_Fractions(SpecIndx('CH4',GasSpecies)) = 0.01;
+Molecular_Fractions(SpecIndx('H2',GasSpecies)) = 0;
+Molecular_Fractions(SpecIndx('H2O',GasSpecies)) = 0.02;
+Molecular_Fractions(SpecIndx('CO',GasSpecies)) = 0;
+Molecular_Fractions(SpecIndx('CO2',GasSpecies)) = 0;
 Partial_Pressure = P*Molecular_Fractions; %bar
 
 %Let's calculate the formation energies of each species in gas phase
@@ -57,7 +57,7 @@ for i = 1:(length(SurfaceSpecies)+length(GasSpecies))
 end
 
 %Let's create the QT0_ZeroCoverage vector
-QT0_ZeroCoverage = zeros(1,(length(GasSpecies)+length(SurfaceSpecies)));
+QT0_ZeroCoverage = zeros(1,(length(SurfaceSpecies)+length(GasSpecies)));
 QT0_ZeroCoverage(SpecIndx('H*',SurfaceSpecies))= 62.3; %[kcal/mol]
 QT0_ZeroCoverage(SpecIndx('OH*',SurfaceSpecies))= 70;
 QT0_ZeroCoverage(SpecIndx('H2O*',SurfaceSpecies))= 10.8;
@@ -74,19 +74,19 @@ QT0_ZeroCoverage(length(SurfaceSpecies)+SpecIndx('CH4',GasSpecies))= 6;
 
 %In order to create the matrix of IE add the dependency between the species for which you want calculate the Q (1 term)
 %and the species that influenced as lateral interaction (teta) (2 term)
-IE = zeros((length(GasSpecies)+length(SurfaceSpecies)),length(SurfaceSpecies));
+IE = zeros((length(SurfaceSpecies)+length(GasSpecies)),length(SurfaceSpecies));
 
-IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = -2.5; %In order to create the matrix of IE add the dependence between the species (1 term) and the species that influenced as lateral interaction (teta) (2 term)
+IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = -2.5; 
 IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('CO*',SurfaceSpecies)) = -3.7;
 
 IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('OH*',SurfaceSpecies)) = -25;
 IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('H2O*',SurfaceSpecies)) = 25;
 IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('O*',SurfaceSpecies)) = -33;
 
-IE(SpecIndx('H2O*',SurfaceSpecies),SpecIndx('OH*',SurfaceSpecies)) = 25;
+IE(SpecIndx('H2O*',SurfaceSpecies),SpecIndx('OH*',SurfaceSpecies)) = IE(SpecIndx('OH*',SurfaceSpecies),SpecIndx('H2O*',SurfaceSpecies));
 IE(SpecIndx('H2O*',SurfaceSpecies),SpecIndx('H2O*',SurfaceSpecies)) = -4.5;
 
-IE(SpecIndx('CO*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = -3.7;
+IE(SpecIndx('CO*',SurfaceSpecies),SpecIndx('H*',SurfaceSpecies)) = IE(SpecIndx('H*',SurfaceSpecies),SpecIndx('CO*',SurfaceSpecies));
 IE(SpecIndx('CO*',SurfaceSpecies),SpecIndx('CO*',SurfaceSpecies)) = -15;
 
 IE(SpecIndx('O*',SurfaceSpecies),SpecIndx('O*',SurfaceSpecies)) = -26;
@@ -476,7 +476,7 @@ for i=1:irxn
     
     fprintf (fileZacrosID_Mechanism,['  pre_expon ', num2str(PreExponForw{i},'%1.2e')  CRLF]);
     fprintf (fileZacrosID_Mechanism,['  pe_ratio ', num2str(PreExponForw{i}/PreExponBack{i},'%1.2e')  CRLF]);
-    fprintf (fileZacrosID_Mechanism,['  activ_eng ', num2str(EactForw{i},'%1.2e')  CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  activ_eng ', num2str(EactForw{i}*conversion_kcal_over_mol_to_eV,'%1.3f')  CRLF]); %[eV]
     
     if ~isempty(GasReact{i})
         if length(SurfProd{i})==1
@@ -612,7 +612,7 @@ fprintf (fileZacrosID_Simulation,['# event_report                on' CRLF]);
 fprintf (fileZacrosID_Simulation,['' CRLF]);
 
 fprintf (fileZacrosID_Simulation,['max_steps                   infinity' CRLF]);
-fprintf (fileZacrosID_Simulation,['max_time                    ' , sprintf('%1.1f', 200)  CRLF]);
+fprintf (fileZacrosID_Simulation,['max_time                    ' , sprintf('%1.1f', 200)  CRLF]); 
 
 fprintf (fileZacrosID_Simulation,['' CRLF]);
 
@@ -636,6 +636,7 @@ fprintf (fileZacrosID_Simulation,['finish' CRLF]);
 fclose(fileZacrosID_Simulation);
 
 %From here we create the lattice_input file
+coord_num = 6; %coordination number
 
 fileZacrosID_Lattice = fopen('lattice_input.dat','w');
 
@@ -674,6 +675,30 @@ for indexcluster = 1:length(SurfaceSpecies)
     fprintf (fileZacrosID_Energetics,['end_cluster' CRLF]);
     fprintf (fileZacrosID_Energetics,['' CRLF]);
     fprintf (fileZacrosID_Energetics,['#########################################################' CRLF]);
+end
+
+for indexpair_row = 1:length(SurfaceSpecies)
+    for indexpair_column = indexpair_row:length(SurfaceSpecies)
+        if IE(indexpair_row,indexpair_column)>0 || IE(indexpair_row,indexpair_column)<0
+            fprintf (fileZacrosID_Energetics,[CRLF]);
+            fprintf (fileZacrosID_Energetics,['cluster ', char(SurfaceSpecies{indexpair_row}),'/', char(SurfaceSpecies{indexpair_column}), '_pair' CRLF]);
+            fprintf (fileZacrosID_Energetics,['  sites 2 ' CRLF]);
+            fprintf (fileZacrosID_Energetics,['  neighboring 1-2' CRLF]);
+            fprintf (fileZacrosID_Energetics,['  lattice_state ' CRLF]);
+            fprintf (fileZacrosID_Energetics,['    1 ', char(SurfaceSpecies{indexpair_row}), ' 1'  CRLF]);
+            fprintf (fileZacrosID_Energetics,['    2 ', char(SurfaceSpecies{indexpair_column}), ' 1'  CRLF]);
+            fprintf (fileZacrosID_Energetics,['  site_types StTp1 StTp1' CRLF]);
+            if strcmp(SurfaceSpecies{indexpair_row},SurfaceSpecies{indexpair_column})==1
+                fprintf (fileZacrosID_Energetics,['  graph_multiplicity 2' CRLF]);
+            else
+                fprintf (fileZacrosID_Energetics,['  graph_multiplicity 1' CRLF]);
+            end
+            fprintf (fileZacrosID_Energetics,['  cluster_eng ' , sprintf('%1.3f', IE(indexpair_row,indexpair_column)/coord_num*conversion_kcal_over_mol_to_eV),' # eV' CRLF]);
+            fprintf (fileZacrosID_Energetics,['end_cluster' CRLF]);
+            fprintf (fileZacrosID_Energetics,['' CRLF]);
+            fprintf (fileZacrosID_Energetics,['#########################################################' CRLF]);
+        end
+    end
 end
 
 fprintf (fileZacrosID_Energetics,['' CRLF]);
