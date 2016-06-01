@@ -7,6 +7,8 @@ global Rgas GasFormH gammaRh BondIndex A_s_Forw A_s_Back T T0 ...
 
 Rgas = 8.314/4.184/1000; %[kcal/mol/K]
 conversion_kcal_over_mol_to_eV = 0.0433634; % 1 kcal/mol = 0.0433634 eV
+Navo = 6.022e23; %[molec/mol]
+h = 6.626070040e-34; %[Js]	
 
 T0 = 300; %[K]
 T = 500 + 273.15; %[K]
@@ -474,9 +476,19 @@ for i=1:irxn
     end
     fprintf (fileZacrosID_Mechanism,[CRLF]);
     
-    fprintf (fileZacrosID_Mechanism,['  pre_expon ', num2str(PreExponForw{i},'%1.2e')  CRLF]);
+    if UBIType(i)==1 || UBIType(i)==4
+    fprintf (fileZacrosID_Mechanism,['  pre_expon ', num2str(PreExponForw{i}/(Rgas*4.184*T)*1e5,'%1.2e')  CRLF]);
     fprintf (fileZacrosID_Mechanism,['  pe_ratio ', num2str(PreExponForw{i}/PreExponBack{i},'%1.2e')  CRLF]);
     fprintf (fileZacrosID_Mechanism,['  activ_eng ', num2str(EactForw{i}*conversion_kcal_over_mol_to_eV,'%1.3f')  CRLF]); %[eV]
+    elseif UBIType(i)==2
+    fprintf (fileZacrosID_Mechanism,['  pre_expon ', num2str(PreExponForw{i}/(Rgas*4.184*1000*1000*T)*1e5,'%1.2e')  CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  pe_ratio ', num2str(PreExponForw{i}/PreExponBack{i},'%1.2e')  CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  activ_eng ', num2str(EactForw{i}*conversion_kcal_over_mol_to_eV,'%1.3f')  CRLF]); %[eV]    
+    elseif UBIType(i)==5 || UBIType(i)==6
+    fprintf (fileZacrosID_Mechanism,['  pre_expon ', num2str(1,'%1.2e')  CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  pe_ratio ', num2str(PreExponForw{i}/PreExponBack{i},'%1.2e')  CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  activ_eng ', num2str(EactForw{i}*conversion_kcal_over_mol_to_eV,'%1.3f')  CRLF]); %[eV]    
+    end
     
     if ~isempty(GasReact{i})
         if length(SurfProd{i})==1
@@ -492,6 +504,28 @@ for i=1:irxn
     fprintf (fileZacrosID_Mechanism,['' CRLF]);
     fprintf (fileZacrosID_Mechanism,['#########################################################' CRLF]);
 end
+
+%Diffusion
+for indexdiff = 1:length(SurfaceSpecies)
+    fprintf (fileZacrosID_Mechanism,['' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['reversible_step ', char(SurfaceSpecies{indexdiff}),'-diffusion' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  sites 2' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  neighboring 1-2' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  initial' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['    1 ',char(SurfaceSpecies{indexdiff}),'  1' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['    2 *  1' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  final' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['    1 *  1' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['    2 ',char(SurfaceSpecies{indexdiff}),'  1' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  site_types STtp1 STtp1' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['  pre_expon ',sprintf('%1.2e', (Rgas*4.184*1000)/Navo*T/h) CRLF]); %[1/s]
+    fprintf (fileZacrosID_Mechanism,['  pe_ratio ',sprintf('%1.2e', 1) CRLF]); %for simmetry
+    fprintf (fileZacrosID_Mechanism,['  activ_eng ',sprintf('%1.3f', 0.2*QT(SpecIndx(SurfaceSpecies{indexdiff},SurfaceSpecies))*conversion_kcal_over_mol_to_eV) CRLF]); 
+    fprintf (fileZacrosID_Mechanism,['end_reversible_step' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['' CRLF]);
+    fprintf (fileZacrosID_Mechanism,['#########################################################' CRLF]);
+end
+
 
 fprintf (fileZacrosID_Mechanism,['' CRLF]);
 fprintf (fileZacrosID_Mechanism,['end_mechanism' CRLF]);
